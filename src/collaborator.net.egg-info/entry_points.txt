@@ -1,0 +1,3 @@
+[console_scripts]
+collaborator = collaborator.DB_Manager:main
+

@@ -1,0 +1,6 @@
+collaborator.net.egg-info/PKG-INFO
+collaborator.net.egg-info/SOURCES.txt
+collaborator.net.egg-info/dependency_links.txt
+collaborator.net.egg-info/entry_points.txt
+collaborator.net.egg-info/requires.txt
+collaborator.net.egg-info/top_level.txt

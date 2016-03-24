@@ -1,0 +1,7 @@
+organization 1,organization 2,distance
+wendys,mcdonalds,20
+wendys,hunter,7
+wendys,qc,3
+mcdonalds,hunter,12
+mcdoanlds,qc,5
+hunter,qc,15

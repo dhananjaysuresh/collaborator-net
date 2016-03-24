@@ -1,0 +1,155 @@
+try:
+        while True:
+            click.echo("collaborator.net Database Management\n")
+            click.echo("Options:")
+            click.echo("1. Insert User")
+            click.echo("2. Insert Organization")
+            click.echo("3. Insert Project")
+            click.echo("4. Insert Attribute")
+            option = click.prompt("Enter option: ", type=click.IntRange(1, 4, clamp=False))
+            if(option == 1):
+                name = click.prompt("Enter user name")
+                phone = click.prompt("Enter user phone number")
+                street = click.prompt("Enter user street")
+                city = click.prompt("Enter user city")
+                state = click.prompt("Enter user state")
+                zipcode = click.prompt("Enter user zipcode")
+                uuser = click.confirm("Is user an university user?")
+                insert_user(name, phone, street, city, state, zipcode, uuser)
+            if(option == 2):
+                name = click.prompt("Enter organization name")
+                phone = click.prompt("Enter organization phone number")
+                street = click.prompt("Enter organization street")
+                city = click.prompt("Enter organization city")
+                state = click.prompt("Enter organization state")
+                zipcode = click.prompt("Enter organization zipcode")
+                insert_organization(name, phone, street, city, state, zipcode)
+            if(option == 3):
+                name = click.prompt("Enter project name")
+                insert_project(name)
+            if(option == 4):
+                name = click.prompt("Enter project name")
+                skill = click.prompt("Enter project skill")
+                level = click.prompt("Enter project level", type=click.IntRange(0, 10, clamp=True))
+                insert_attribute(name, skill, level)
+            
+    except KeyboardInterrupt:
+        pass
+        
+        
+        
+@click.command()
+def insert_user():
+    fname = click.prompt("Enter user first name")
+    lname = click.prompt("Enter user first name")
+    phone = click.prompt("Enter user phone")
+    street = click.prompt("Enter user street")
+    city = click.prompt("Enter user city")
+    state = click.prompt("Enter user state")
+    zipcode = click.prompt("Enter user zipcode")
+    degree = click.prompt("Enter user degree")
+    uuser = click.confirm("Is user an university user?", default=False)
+    
+    if(click.confirm("Do you want to add attributes?")):
+        attributes = db.attributes_collection
+        attribute_list = attributes.find()
+        user_a_list = []
+        if(attribute_list.count() <= 0):
+            while(click.confirm("Do you want to make and add an attribute to user?")):
+                a_id = insert_attribute()
+                if(a_id != -1):
+                    user_a_list.append(a_id)
+        else:
+            while(True):
+                Utilities.print_attribute_list(attribute_list)
+                attribute_list.rewind()
+                a_index = click.prompt('Please attribute number to add to user or enter -1 to finish', type=int)
+                if(a_index != -1):
+                    user_a_list.append(attribute_list[a_index]["_id"])
+                else:
+                    break
+    
+    organizations = db.organizations.collection
+    organization_list = organizations.find()
+    if(organization_list.count() <= 0):
+        o_id = insert_organization()
+    else:
+        Utilities.print_organization_list(organization_list)
+        organization_list.rewind()
+        o_index = click.prompt('Please organization number to add to user or enter -1 to finish', type=int)
+        if(o_index != -1):
+            o_id = organization_list[o_index]["_id"]
+            
+    user = {"first_name" : fname,
+            "last_name" : lname,
+            "phone" : phone,
+            "street" : street,
+            "state" : state,
+            "city" : city,
+            "zipcode" : zipcode,
+            "degree" : degree,
+            "type" : uuser,
+            "attributes" : user_a_list,
+            "organization" : o_id
+            }
+    Utilities.print_dictionary(user)
+    if click.confirm('Do you want to add this user?'):
+        users = db.users_collection
+        user_id = users.insert_one(user).inserted_id
+        click.echo('Inserted user with _id: {0}'.format(user_id))
+
+@click.command()
+def insert_organization():
+    name = click.prompt("Enter organization name")
+    phone = click.prompt("Enter organization phone")
+    street = click.prompt("Enter organization street")
+    city = click.prompt("Enter organization city")
+    state = click.prompt("Enter organization state")
+    zipcode = click.prompt("Enter organization zipcode")
+    
+    organizations = db.organizations_collection
+    db.organizations.create_index([("name", ASCENDING)], unique=True)
+    organization = {"name" : name,
+            "phone" : phone,
+            "street" : street,
+            "state" : state,
+            "city" : city,
+            "zipcode" : zipcode
+            }
+    Utilities.print_dictionary(organization)
+    if click.confirm('Do you want to add this organization?'):
+        organization_id = organizations.insert_one(organization).inserted_id
+        click.echo('Inserted organization with id: {0}'.format(organization_id))
+    
+@click.command()
+def insert_project():
+    name = click.prompt("Enter project name")
+    
+    projects = db.projects_collection
+    db.projects.create_index([("name", ASCENDING)], unique=True)
+    project = {"name" : name
+            }
+    Utilities.print_dictionary(project)
+    if click.confirm('Do you want to add this project?'):
+        project_id = projects.insert_one(project).inserted_id
+        click.echo('Inserted project with id: %s', project_id)
+    
+@click.command()
+def insert_attribute():
+    name = click.prompt("Enter attribute name")
+    skill = click.confirm("Is attribute a skill?", default=False)
+    level = click.prompt("Enter skill level (0-10)", type=click.IntRange(0, 10, clamp=True))
+                         
+    attributes = db.attributes_collection
+    db.attributes.create_index([("name", ASCENDING)], unique=True)
+    attribute = {"name" : name,
+                 "skill" : skill,
+                 "level" : level
+            }
+    Utilities.print_dictionary(attribute)
+    if click.confirm('Do you want to add this attribute?'):
+        attribute_id = attributes.insert_one(attribute).inserted_id
+        click.echo('Inserted project with id: {0}'.format(attribute_id))
+        return attribute_id
+    else:
+        return -1
