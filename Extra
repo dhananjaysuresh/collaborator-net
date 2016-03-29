@@ -1,3 +1,21 @@
+Delete:
+MATCH (n)
+OPTIONAL MATCH (n)-[r]-()
+DELETE n,r
+
+MATCH (user:User {user_id:"11111132"}),(u1:User)-[:WORKS_ON]->(projects)<-[:WORKS_ON]-(u2:User), (u1)-[:LIKES]-(interests)
+WITH user, u1, u2, projects, collect(interests) as i
+WHERE u1.user_id <> user.user_id AND u2.user_id <> user.user_id AND u1 <> u2
+RETURN DISTINCT u1, i
+
+MATCH (user:User {user_id:"11111171"})-[:LIKES]->(likes)<-[knows_b:LIKES]-(related_user:User),
+(user)-[:IN]->(user_org)<-[dis:DISTANCE_FROM]-(nearby_org)
+WHERE dis.distance<=10
+WITH knows_b, related_user, nearby_org, likes
+MATCH (related_user)-[:IN]-(nearby_org)
+RETURN DISTINCT knows_b.level, likes.name, related_user, labels(likes)
+ORDER BY knows_b.level DESC
+
 try:
         while True:
             click.echo("collaborator.net Database Management\n")

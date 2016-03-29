@@ -32,7 +32,7 @@ db = client.collaborator_database
 #db.organization_distances.drop()
 graph_constraints = {"User" : "user_id", "Skill" : "name",
                      "Interest" : "name", "Organization" : "name",
-                     "Project" : "name", "IN" : ""}
+                     "Project" : "name"}
 
 for k in graph_constraints:
     try:
@@ -89,7 +89,7 @@ def load_user_organizations(filename):
                 click.echo(err)
             try:
                 record = cypher.execute("MATCH (user:User {user_id:{id}}), (org:Organization {name:{a}})\n" +
-                                        "CREATE (user)-[rel:IN]->(org) RETURN rel",
+                                        "CREATE UNIQUE (user)-[rel:IN]->(org) RETURN rel",
                                         a=row['organization'], id=row['user_id'])
                 click.echo(record.one)
             except CypherError as err:
@@ -118,7 +118,7 @@ def load_user_projects(filename):
                 click.echo(err)
             try:
                 record = cypher.execute("MATCH (user:User {user_id:{id}}), (proj:Project {name:{a}})\n" +
-                                        "CREATE (user)-[rel:WORKS_ON]->(proj) RETURN rel",
+                                        "CREATE UNIQUE (user)-[rel:WORKS_ON]->(proj) RETURN rel",
                                         a=row['project'], id=row['user_id'])
                 click.echo(record.one)
             except CypherError as err:
@@ -131,7 +131,7 @@ def load_user_skills(filename):
         reader = csv.DictReader(f, fieldnames=['user_id', 'skill', 'skill_level'])
         for row in reader:
             try:
-                row['skill_level'] = float(row['skill_level'])
+                row['skill_level'] = int(float(row['skill_level']))
             except ValueError:
                 continue
             write_result = db.users.update({'user_id' : row['user_id']},
@@ -151,7 +151,7 @@ def load_user_skills(filename):
                 click.echo(err)
             try:
                 record = cypher.execute("MATCH (user:User {user_id:{id}}), (skill:Skill {name:{a}})\n" +
-                                        "CREATE (user)-[rel:KNOWS {level:{b}}]->(skill) RETURN rel",
+                                        "CREATE UNIQUE (user)-[rel:KNOWS {level:{b}}]->(skill) RETURN rel",
                                         a=row['skill'], b=row['skill_level'], id=row['user_id'])
                 click.echo(record.one)
             except CypherError as err:
@@ -184,7 +184,7 @@ def load_user_interests(filename):
                 click.echo(err)
             try:
                 record = cypher.execute("MATCH (user:User {user_id:{id}}), (interest:Interest {name:{a}})\n" +
-                                        "CREATE (user)-[rel:LIKES {level:{b}}]->(interest) RETURN rel",
+                                        "CREATE UNIQUE (user)-[rel:LIKES {level:{b}}]->(interest) RETURN rel",
                                         a=row['interest'], b=row['interest_level'], id=row['user_id'])
                 click.echo(record.one)
             except CypherError as err:
@@ -205,7 +205,7 @@ def load_organization_distances(filename):
             try:
                 cypher = graph.cypher
                 record = cypher.execute("MATCH (org1:Organization {name:{a}}), (org2:Organization {name:{b}})\n"+
-                                        "CREATE (org1)-[rel:DISTANCE_FROM {distance:{c}}]->(org2) RETURN rel",
+                                        "CREATE UNIQUE (org1)-[rel:DISTANCE_FROM {distance:{c}}]->(org2) RETURN rel",
                                         a=row['organization_1'], b=row['organization_2'], c=row['distance'])
                 click.echo(record.one)
             except CypherError as err:
@@ -227,31 +227,52 @@ def get_user(user_id):
 def get_similar_users(user_id):
     try:
         cypher = graph.cypher
-        record = cypher.execute("MATCH (user:User {user_id:{id}})\n" +
-                                "MATCH (a:Organization)-[dis:IN {distance}]--(b:Organization)" +
-                                        "CREATE (org1)-[rel:DISTANCE_FROM {distance:{c}}]->(org2) RETURN rel",
-                                        id=user_id)
-        click.echo(record.one)
+        record = cypher.execute("MATCH (user:User {user_id:{id}})-[:LIKES]->(likes)<-[knows_b:LIKES]-(related_user:User)," +
+                                "(user)-[:IN]->(user_org)<-[dis:DISTANCE_FROM]-(nearby_org)\n" +
+                                "WHERE dis.distance<=10\n" +
+                                "WITH user, knows_b, related_user, nearby_org, likes\n" +
+                                "MATCH (related_user)-[:IN]-(nearby_org)\n" +
+                                "RETURN DISTINCT user, knows_b.level, likes.name, related_user, labels(likes)\n" +
+                                "ORDER BY knows_b.level DESC", id=user_id)
     except CypherError as err:
         click.echo(err)
+        exit()
         
-    '''
-MATCH (user:User {user_id:"5930430"})-[:KNOWS|LIKES]->(knows_likes)<-[knows_b:KNOWS|LIKES]-(related_user:User),
-(user)-[:IN]->(user_org)<-[dis:DISTANCE_FROM]-(nearby_org)
-WHERE dis.distance<=10
-WITH knows_b, related_user, nearby_org
-MATCH (related_user)-[:IN]-(nearby_org)
-RETURN related_user, knows_b
-ORDER BY knows_b.level DESC
-    '''
-    
-    template = '{0:10}|{1:15}|{2:15}|{3:10}|{4:30}|{5:15}'
-    header = template.format('User Id', 'First Name', 'Last Name', 'Phone', 'Address', 'Degree')
+    click.echo("Related users to {0}".format(user_id))
+    template = '{0:10}|{1:15}|{2:15}|{3:10}|{4:10}|{5:4}'
+    header = template.format('User Id', 'First Name', 'Last Name', 'Type','Attribute', 'Level')
     click.echo(header)
     click.echo('-'*len(header))
     for document in record:
-        click.echo(template.format(document['user_id'], document['first_name'], document['last_name'], document['phone'], document['address'], document['degree']))
+        related_user = document['related_user']
+        click.echo(template.format(related_user['user_id'], related_user['first_name'], related_user['last_name'], document['labels(likes)'][0], document['likes.name'], document['knows_b.level']))
             
+@click.command('get_trusted_colleagues', short_help='Get trusted colleagues-of-colleagues')
+@click.argument('user_id')
+def get_trusted_colleagues(user_id):
+    try:
+        cypher = graph.cypher
+        record = cypher.execute("MATCH (user:User {user_id:{id}}), " +
+                                "(u1:User)-[:WORKS_ON]->(projects)<-[:WORKS_ON]-(u2:User), " +
+                                "(u1)-[:LIKES]-(interests)\n" +
+                                "WITH user, u1, u2, projects, collect(interests.name) as i\n" +
+                                "WHERE u1.user_id <> user.user_id AND u2.user_id <> user.user_id AND u1 <> u2\n" +
+                                "RETURN DISTINCT u1, i", id=user_id)
+    except CypherError as err:
+        click.echo(err)
+        exit()
+        
+    click.echo("Trusted Colleagues:")
+    template = '{0:10}|{1:15}|{2:15}|{3:10}'
+    header = template.format('User Id', 'First Name', 'Last Name', 'Interest')
+    click.echo(header)
+    click.echo('-'*len(header))
+    for document in record:
+        colleague = document['u1']
+        interests = document['i']
+        click.echo(template.format(colleague['user_id'], colleague['first_name'], colleague['last_name'], interests[0]))
+        for i in range(1,len(interests)):
+            click.echo(template.format("", "", "", interests[i]))
 
 main.add_command(load_users)
 main.add_command(load_user_organizations)
@@ -261,6 +282,8 @@ main.add_command(load_user_interests)
 main.add_command(load_organization_distances)
 main.add_command(get_user)
 main.add_command(get_similar_users)
+main.add_command(get_trusted_colleagues)
+
 if __name__ == '__main__':
     main()
         

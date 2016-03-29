@@ -1,6 +1,5 @@
 #!/bin/bash
 collaborator load_users users.csv
-collaborator load_user_skills skills.csv
 collaborator load_user_interests interests.csv
 collaborator load_user_projects projects.csv
 collaborator load_user_organizations organizations.csv
