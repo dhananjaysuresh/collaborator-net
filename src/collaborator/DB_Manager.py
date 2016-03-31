@@ -1,7 +1,7 @@
 '''
 Created on Mar 17, 2016
 
-@author: DJ
+@author: Dhananjay Suresh, Taha
 '''
 import click, csv
 from pymongo import MongoClient, ASCENDING
@@ -9,6 +9,8 @@ from pymongo.errors import ServerSelectionTimeoutError, DuplicateKeyError
 from py2neo import authenticate, Graph
 from py2neo.cypher import CypherError
 
+#Connect to server
+#Exit on error
 try:
     click.echo('Connecting to MongoDB server.............')
     client = MongoClient('localhost', 27017)
