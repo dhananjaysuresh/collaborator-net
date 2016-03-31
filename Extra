@@ -16,6 +16,40 @@ MATCH (related_user)-[:IN]-(nearby_org)
 RETURN DISTINCT knows_b.level, likes.name, related_user, labels(likes)
 ORDER BY knows_b.level DESC
 
+            
+@click.command('load_user_skills', short_help='Load CSV file with users and their skills')
+@click.argument('filename', type=click.Path(exists=True))
+def load_user_skills(filename):
+    with open(filename, 'rb') as f:
+        reader = csv.DictReader(f, fieldnames=['user_id', 'skill', 'skill_level'])
+        for row in reader:
+            try:
+                row['skill_level'] = int(float(row['skill_level']))
+            except ValueError:
+                continue
+            write_result = db.users.update({'user_id' : row['user_id']},
+                                                      {'$push':
+                                                       {'skills' :
+                                                        {'name' : row['skill'], 'level' : row['skill_level']}
+                                                        }
+                                                       }
+                                                      )
+            click.echo('Inserted user skill with result: {0}'.format(write_result))
+            
+            cypher = graph.cypher
+            try:
+                record = cypher.execute("CREATE (skill:Skill {name:{a}})", a=row['skill'])
+                click.echo(record.one)
+            except CypherError as err:
+                click.echo(err)
+            try:
+                record = cypher.execute("MATCH (user:User {user_id:{id}}), (skill:Skill {name:{a}})\n" +
+                                        "CREATE UNIQUE (user)-[rel:KNOWS {level:{b}}]->(skill) RETURN rel",
+                                        a=row['skill'], b=row['skill_level'], id=row['user_id'])
+                click.echo(record.one)
+            except CypherError as err:
+                click.echo(err)
+
 try:
         while True:
             click.echo("collaborator.net Database Management\n")
