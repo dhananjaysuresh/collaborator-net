@@ -186,7 +186,7 @@ def load_user_interests(filename):
 @click.argument('filename', type=click.Path(exists=True))
 def load_organization_distances(filename):
     with open(filename, 'rb') as f:
-        #Open CSVI
+        #Open CSV
         reader = csv.DictReader(f, fieldnames=['organization_1', 'organization_2', 'distance'])
         for row in reader:
             #Convert distance to int

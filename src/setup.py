@@ -7,10 +7,12 @@ from setuptools import setup
 
 setup(
     name='collaborator.net',
-    version='0.1',
-    py_modules=['Interface', 'DB_Manager'],
+    version='1.0',
+    py_modules=['DB_Manager'],
     install_requires=[
-        'Click',
+        'click',
+        'py2neo',
+        'pymongo'
     ],
     entry_points={
          'console_scripts': [
