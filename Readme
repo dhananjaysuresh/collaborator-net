@@ -1,0 +1,7 @@
+Readme
+
+To install run in src directory:
+pip install --editable .
+
+Then use command 'collaborator' to see all availble commands and
+descriptions.

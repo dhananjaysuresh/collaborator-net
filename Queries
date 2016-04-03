@@ -1,0 +1,67 @@
+collaborator.net
+Dhananjay Suresh, Taha Tariq
+Queries and Potential Improvements
+
+
+MongoDB queries:
+1) Updates user's organization in MongoDB:
+db.users.update({'user_id' : row['user_id']},
+                 {'$set':
+                      	{'organization' :
+                    		{'name' : row['organization'],
+                    		'type' : row['organization_type']}
+                        }
+                		})
+                                             	
+2) Insert orginization distance relationship into MongoDB:
+db.organization_distances.insert_one(row).inserted_id
+
+3) Find user in MongoDB based on user_id:
+db.users.find({'user_id' : user_id})
+
+4) Create an index on MongoDB based on user_id:
+db.users.create_index([('user_id', ASCENDING)], unique=True)
+
+5) Updates the user's project in MongoDB:
+db.user.update({'user_id' : row['user_id']},
+				{'$push': {'projects' : {'name' : row['project']} }
+                	})
+
+6) Adds an interest to the user in MongoDB:
+db.users.update({'user_id' : row['user_id']},
+				{'$push':{'interests' :{'name' : row['interest'],
+				 			'level' : row['interest_level']}}
+				})      
+
+Graph queries:
+1) Insert user into Neo4J:
+cypher.execute("CREATE (user:User {user_id:{a}, first_name:{b}, last_name:{c}}) 			RETURN user", a=row['user_id'], b=row['first_name'],
+				c=row['last_name'])
+
+2) Create orginzation:
+cypher.execute("CREATE (org:Organization {name:{a}, type:{b}})",
+				a=row['organization'],b=row['organization_type'])
+      
+3) Create relationship between user and organization:
+cypher.execute("MATCH (user:User {user_id:{id}}), (org:Organization {name:{a}})\n" + "CREATE UNIQUE (user)-[rel:IN]->(org) RETURN rel",
+		a=row['organization'], id=row['user_id'])  
+
+4) Create project:
+cypher.execute("CREATE (proj:Project {name:{a}})", a=row['project'])
+
+5) Create user and project relationship:
+cypher.execute("MATCH (user:User {user_id:{id}}), (proj:Project {name:{a}})\n" +
+				"CREATE UNIQUE (user)-[rel:WORKS_ON]->(proj) RETURN rel",
+				a=row['project'], id=row['user_id'])
+
+6)Create interest:
+cypher.execute("CREATE (interest:Interest {name:{a}})", a=row['interest'])
+
+7)Create user interest relationship with interest level
+cypher.execute("MATCH (user:User {user_id:{id}}), (interest:Interest {name:{a}})\n"
+				+ "CREATE UNIQUE (user)-[rel:LIKES {level:{b}}]->(interest) RETURN rel",
+				a=row['interest'], b=row['interest_level'], id=row['user_id'])
+
+How to make queries more effiecient:
+1) Indexing the user_ids and the names of project organization and interests. This will speed up queries that are accessed by user_id or name.
+2) Only return data that is needed. This will speed up queries since they don't have to return excessive amounts of data that is not needed by the client.

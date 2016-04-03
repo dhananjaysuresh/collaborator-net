@@ -1,0 +1,42 @@
+collaborator.net
+Dhananjay Suresh, Taha Tariq
+Description of Data
+
+Entities:
+
+User:
+User ID, First Name, Last Name, Phone Number, Address, Degree
+All are entered as strings.
+
+Organization:
+Organization Name, Organization Type
+All are entered as strings.
+
+Project:
+Project Name
+All are entered as strings.
+
+Interest:
+Interest Name, Interest Level
+Interest name is a string and interest level is a int.
+
+Organization Distance:
+Organization 1 Name, Organization 2 Name, Distance
+Organization 1 and 2 are strings and the distance between them is a int
+
+
+Relationships:
+
+User-Organization:
+Relationship is N-M
+
+User-Interest:
+Relationship is N-M. Relationship has attribute interest level that shows how strong user is in favor of interest.
+
+User-Project:
+Relationship is N-M.
+
+Organization-Organization:
+Relationship is N-M. Relationship has attribute distance that shows the distance between two organizations.
+
+
