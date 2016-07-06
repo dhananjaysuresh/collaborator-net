@@ -1,4 +1,8 @@
-Readme
+collaborator-net
+CSCI 49731
+Big Data
+
+Utilized a graph database (Neo4j) to compute connections between similar users using affiliation, skills and location.
 
 To install run in src directory:
 pip install --editable .
